@@ -33,15 +33,20 @@ powershell.exe -ExecutionPolicy Bypass -File .\Winget-Java-Deployment.ps1
 
 ### Parameters
 
-| Parameter     | Default | Description                                      |
-|---------------|---------|--------------------------------------------------|
-| `-WaitSeconds`| `180`   | Maximum time to wait for winget to become ready |
-| `-PollSeconds`| `3`     | Interval between winget readiness checks        |
+| Parameter          | Alias   | Default | Description                                              |
+|--------------------|---------|---------|----------------------------------------------------------|
+| `-WaitSeconds`     |         | `180`   | Maximum time to wait for winget to become ready         |
+| `-PollSeconds`     |         | `3`     | Interval between winget readiness checks                |
+| `-SkipUninstall`   | `-SU`   |         | Skip uninstall of all other Oracle.JDK versions         |
+| `-Keep131`         | `-K131` |         | Keep Java 1.3.1                                          |
+| `-ReinstallLTS`    | `-RLTS` |         | Reinstall the current LTS version                       |
 
 Example:
 
 ```powershell
 .\Winget-Java-Deployment.ps1 -WaitSeconds 300 -PollSeconds 5
+.\Winget-Java-Deployment.ps1 -SU -Keep131
+.\Winget-Java-Deployment.ps1 -RLTS -w 300
 ```
 
 ## Exit codes

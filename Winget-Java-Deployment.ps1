@@ -1,7 +1,6 @@
-#Install winget and Oracle.JDK while removing all over version of Oracle.JDK
-
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
+
 <#
 .SYNOPSIS
     Oracle.JDK LTS deployment script for Desktop Centrail and other domain deployments.
@@ -18,12 +17,38 @@
 
     Detects current Oracle.JDK LTS version, uninstalls all other Oracle.JDK versions, and installs the current LTS version.
     Only works on Oracle.JDK versions installed via winget. If the current LTS version is already installed, it will be skipped.
+
+.EXAMPLE
+    .\Winget-Java-Deployment.ps1
+    Default run: bootstrap winget, remove other Oracle.JDK versions, install current LTS.
+
+.EXAMPLE
+    .\Winget-Java-Deployment.ps1 -SkipUninstall
+    Install/update the current LTS without uninstalling other Oracle.JDK versions.
+
+.EXAMPLE
+    .\Winget-Java-Deployment.ps1 -SU -Keep131
+    Skip uninstall of other versions and also keep Java 1.3.1 (using aliases).
+
+.EXAMPLE
+    .\Winget-Java-Deployment.ps1 -ReinstallLTS -WaitSeconds 300
+    Force reinstall of the current LTS and wait up to 300 seconds for winget.
+
+.EXAMPLE
+    .\Winget-Java-Deployment.ps1 -RLTS -K131 -PollSeconds 5
+    Reinstall current LTS, keep 1.3.1, and poll every 5 seconds (using aliases).
 #>
 
 [CmdletBinding()]
 param(
     [int]$WaitSeconds = 180,
-    [int]$PollSeconds = 3
+    [int]$PollSeconds = 3,
+    [alias('SU')]
+    [switch]$SkipUninstall, # Skip uninstall of all other Oracle.JDK versions
+    [alias('K131')]
+    [switch]$Keep131,       # Keep java 1.3.1 
+    [alias('RLTS')]
+    [switch]$ReinstallLTS   # Reinstall the current LTS version
 )
 
 Set-StrictMode -Version Latest
@@ -411,17 +436,24 @@ function Remove-JavaCurrentVersions {
             Write-host "`nFound the following Oracle.JDK versions installed:"
             $versions | Format-Table Id -AutoSize
 
+            # Skip uninstalling all Oracle.JDK versions if -SkipUninstall switch is used
+            if($SkipUninstall) { Write-Host "`nSkipping uninstall of all Oracle.JDK versions due to -SkipUninstall [-SU] switch" ; return }
+
             $versions | ForEach-Object {
                 
                 $id = $_.Id
-
-                write-host "`nLooking at $($id)..."
-                # Skip uninstalling the current LTS version
-                if($id -ne "$($Java_LTS)") {
                 
-                    Write-Host "Uninstalling $($id)..."
-                    winget uninstall --id $id -e --source winget --accept-source-agreements
-                } else { Write-Host "Skipping uninstall of current LTS version $($Java_LTS)" }
+                write-host "`nLooking at $($id)..."
+                # Skip uninstalling java 1.3.1 if -Keep131 switch is used
+                if($Keep131 -and $id -eq "Oracle.JDK.1") { Write-Host "`nSkipping uninstall of Oracle.JDK.1.3.1 due to -Keep131 [-K131] switch" ; continue }
+
+                # Skip uninstalling the current LTS version if -ReinstallLTS [-RLTS] switch is not used
+                if($id -eq "$($Java_LTS)" -and $ReinstallLTS -eq $false) { Write-Host "Skipping uninstall of current LTS version $($Java_LTS)" ; continue }
+                elseif ($ReinstallLTS -eq $true) { Write-Host "Uninstalling $($Java_LTS) due to -ReinstallLTS [-RLTS] switch throw" } 
+                else { Write-Host "Uninstalling $($id)..." }
+                
+                winget uninstall --id $id -e --source winget --accept-source-agreements
+
             }
         }
     } catch { Write-Host "`nRemove-JavaCurrentVersions failed:`n$($_.Exception.Message)`n"
@@ -498,7 +530,8 @@ try {
     $target = "$($Java_packageLTS)"
     write-host "Targeting $($target)"
     winget install --source winget --id $target -e --accept-source-agreements --accept-package-agreements --silent
-    write-host "Updating current Java LTS..."
+
+    Write-Step "Updating current Java LTS..."
     winget update --source winget --id $target -e --accept-source-agreements --accept-package-agreements --silent
 
 
