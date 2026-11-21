@@ -83,4 +83,4 @@ Example:
 
 ## License
 
-Specify your preferred license (e.g. MIT) here.
+MIT Licensed
